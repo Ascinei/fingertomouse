@@ -8,8 +8,6 @@ import configparser
 parser = configparser.ConfigParser()
 parser.read("config.ini")
 
-DISTPATH = ""
-
 usingRelative = False # Determine mouse movement
 
 smoothing = parser.getboolean('DEFAULT','smoothing') # Absolute smoothing
@@ -27,10 +25,17 @@ thumbclicklenancy = parser.getfloat('DEFAULT','thumbclicklenancy')
 displayWebcam = parser.getboolean('DEFAULT','displayWebcam')
 switchstylebind = parser.get('DEFAULT','switchstylebind')
 exitkey = parser.get('DEFAULT','exitkey')
+invertx = parser.getboolean('DEFAULT', 'invertx')
+inverty = parser.getboolean('DEFAULT', 'inverty')
+clickinterval = parser.getfloat('DEFAULT', 'clickinterval')
 
+cameraused = parser.get('TRACKING-SENSITIVITY', 'cameraused')
 maxnumhands = parser.getint('TRACKING-SENSITIVITY', 'maxnumhands')
 detectionconfidence = parser.getfloat('TRACKING-SENSITIVITY', 'detectionconfidence')
 trackingconfidence = parser.getfloat('TRACKING-SENSITIVITY', 'trackingconfidence')
+
+resolutionx = parser.getint('MONITOR', 'resolutionx')
+resolutiony = parser.getint('MONITOR', 'resolutiony')
 
 pastX = 0
 pastY = 0
@@ -38,7 +43,7 @@ difX = 0.0
 difY = 0.0
 
 pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0.08
+pyautogui.PAUSE = clickinterval
 
 cap = cv2.VideoCapture(0)
 mpHands = mp.solutions.hands
@@ -48,20 +53,20 @@ hands = mpHands.Hands(static_image_mode=False,
                       min_tracking_confidence=trackingconfidence)
 mpDraw = mp.solutions.drawing_utils
 
-pTime = 0
-cTime = 0
-finalx = 960.0
-finaly = 540.0
+finalx = 0
+finaly = 0
 
 def mapToScreenX(val):
     global pastX
     global finalx
     # 65535 pixels
-    scale = 65535/absoluteareax
+    scale = 65535/(absoluteareax)
+    if not invertx:
+        val = 1-val
     finalx = scale - (scale * (val+absoluteoffsetx))
     finalx = min(scale, finalx)
     finalx = max(0, finalx)
-    smoothResX = scale/1920
+    smoothResX = scale/resolutionx
     if smoothing and abs(finalx - pastX) > (smoothResX * smoothingValue):
         pastX = finalx
         return int(pastX)
@@ -74,12 +79,13 @@ def mapToScreenY(val):
     global pastY
     global finaly
     scale = 65535/absoluteareay
-    val = 1-val
+    if not inverty:
+        val = 1-val
     finaly = scale - (scale *(val+absoluteoffsety))
     print(val)
     finaly = min(scale, finaly)
     finaly = max(0, finaly)
-    smoothResY = scale/1080
+    smoothResY = scale/resolutiony
     if smoothing and abs(finaly - pastY) > (smoothResY * smoothingValue):
         pastY = finaly
         return int(pastY)
@@ -103,9 +109,6 @@ def triggerClick(ix, tx):
         if abs(ix - tx) > thumbclicklenancy:
             pyautogui.click()
 
-
-count = 0
-  
 
 
 while True:
